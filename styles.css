@@ -1,0 +1,81 @@
+:root {
+  --bg-color: #282828;
+  --text-color: #ebdbb2;
+  --highlight-color: #fe8019;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+}
+
+p, h1 { 
+  color: var(--text-color); 
+}
+
+h1 { 
+  font-size: 45px;
+  text-align: center; 
+}
+
+h2 {
+  color: white;
+  padding: 8px 0;
+}
+
+a {
+  color: var(--text-color);
+  text-decoration: underline;
+}
+
+a:visited {
+  color: var(--text-color);
+}
+
+a:hover {
+  text-decoration: none;
+}
+
+/* Document */
+
+html, body {
+  height: 100%;
+  width: 100%;
+}
+
+body { 
+  background-color: var(--bg-color);
+  max-width: 65ch;
+  margin: auto;
+  padding: 12px;
+
+  display: flex;
+  flex-flow: column wrap;
+  justify-content: space-around;
+}
+
+header {
+  display: flex;
+  flex-flow: column wrap;
+  align-content: center;
+}
+
+header img {
+  max-width: 125px;
+  margin: auto;
+  object-fit: contain;
+}
+
+hr {
+  color: var(--highlight-color);
+}
+
+article {
+  flex-grow: 1;
+
+  padding-top: 24px;
+}
+
+article ul li::marker {
+  color: white;
+}

@@ -1,0 +1,124 @@
+# Case Study 2 - Allen Soberanes
+
+## Load the CSV into a data frame
+
+```{r,warning=FALSE,message=FALSE}
+library("tidyverse")
+
+customer_orders <- read_csv("casestudy.csv")
+customer_orders$customer_email <- trimws(customer_orders$customer_email)
+```
+
+
+## Total revenue for each year
+
+```{r,warning=FALSE,message=FALSE}
+net_revenues <- customer_orders %>% group_by(year) %>% summarise(net_revenue = sum(net_revenue))
+net_revenues
+```
+
+
+## New Customer Revenue e.g. new customers not present in previous year only
+
+```{r,warning=FALSE,message=FALSE}
+customer_orders <- customer_orders %>% group_by(customer_email) %>% mutate(second_to_last_year=lag(year, 1)) %>% ungroup()
+
+customer_orders <- customer_orders %>% mutate(status=case_when(is.na(second_to_last_year) ~ 'New', second_to_last_year != year - 1 ~ 'New', TRUE ~ 'Returning'))
+
+new_customer_revenues <- customer_orders %>% group_by(year) %>% summarise(net_revenue = sum(net_revenue[status == "New"]))
+
+new_customer_revenues
+```
+One limitation present when finding new customer revenues is that I assumed all customers from 2015 were new. I could find the average number of new customers for subsequent years and apply it to a random sample of the 2015 customers, but I did not want to introduce made up data.
+
+
+## Existing Customer Growth. To calculate this, use the Revenue of existing customers for current year –(minus) Revenue of existing customers from the previous year 
+
+```{r,warning=FALSE,message=FALSE}
+existing_customer_growth <- customer_orders %>% group_by(year) %>% summarise(existing_customer_growth=sum(net_revenue[status == "Returning"]) - sum(net_revenue[status == "Returning" & year == year - 1]))
+existing_customer_growth
+```
+
+
+## Existing Customer Revenue
+
+```{r,warning=FALSE,message=FALSE}
+exisiting_customer_revenue <- customer_orders %>% group_by(year) %>% summarise(customer_revenue=sum(net_revenue[status == "Returning"]))
+exisiting_customer_revenue
+```
+
+
+## Total Customers Current Year
+
+```{r,warning=FALSE,message=FALSE}
+total_customers <- customer_orders %>% group_by(year) %>% summarise(total_customers=length(customer_email))
+total_customers
+```
+
+
+## New Customers
+
+```{r,warning=FALSE,message=FALSE}
+new_customers <- customer_orders %>% group_by(year) %>% summarise(new_customers=customer_email[status == "New"])
+new_customers
+
+new_customers_2015 <- new_customers[new_customers$year == 2015,]
+new_customers_2016 <- new_customers[new_customers$year == 2016,]
+new_customers_2017 <- new_customers[new_customers$year == 2017,]
+```
+The `new_customers` data frame has the data for all new customers. The next 3 data frames are all the new customers separated by year.
+
+
+## Lost Customers
+
+```{r,warning=FALSE,message=FALSE}
+customer_orders <- customer_orders %>% group_by(customer_email) %>% mutate(next_year_back=lead(year, 1)) %>% ungroup() 
+
+customer_orders <- customer_orders %>% mutate(lost=case_when((is.na(next_year_back) | next_year_back - year > 1) & year != 2017 ~ 'True', year == 2017 ~ NA_character_, TRUE ~ 'False'))
+
+lost_customers <- customer_orders %>% group_by(year) %>% summarise(lost_customers=customer_email[lost == "True"]) 
+lost_customers
+
+lost_customers_2015 <- lost_customers[lost_customers$year == 2015,]
+lost_customers_2016 <- lost_customers[lost_customers$year == 2016,]
+lost_customers_2017 <- lost_customers[lost_customers$year == 2017,]
+```
+The `lost_customers` data frame has the data for all lost customers. The next 3 data frames are all the lost customers separated by year.
+
+
+## Generate a few unique plots highlighting some information from the dataset
+
+
+**Average Revenue Per Year by Customer Status**
+
+```{r,warning=FALSE,message=FALSE}
+library("ggplot2")
+options(scipen=10)
+
+ggplot(customer_orders, aes(x=year, y=mean(net_revenue), fill=status)) + geom_col() + labs(x="Year", y="Average Revenue ($)", title="Average Revenue Per Year by Customer Status")
+```
+
+
+For all years, a large majority of the average net revenue is coming from new customers rather than from exisiting customers. The company's advertising strategy should take this into account and focus more on on-boarding new customers. 
+
+
+**Number of Customers Who Stayed or Left by Year**
+
+```{r,warning=FALSE,message=FALSE}
+ggplot(data=subset(customer_orders, !is.na(lost)), aes(x=year, fill=lost)) + geom_histogram(stat="count") + labs(x="Year", y="Number of Customers", title="Number of Customers Who Stayed or Left by Year") + scale_x_continuous(breaks=0:2100)
+```
+
+
+It also looks as though most of the company's customers leave after the first year of doing business.
+
+
+**Average Revenue Per Year by Customers Who Stayed or Left**
+
+```{r,warning=FALSE,message=FALSE}
+ggplot(data=subset(customer_orders, !is.na(lost)), aes(x=year, y=mean(net_revenue), fill=lost)) + geom_col() + labs(x="Year", y="Average Revenue ($)", title="Average Revenue Per Year by Customers Who Stayed or Left") + scale_x_continuous(breaks=0:2100)
+```
+
+
+Most of their average yearly revenue is coming from those customers who leave after the first year of doing business. If most of the company's revenue is coming simultaneously from new customers and customers who leave after their first year of doing business, that must mean that they're revenue is mostly comprised of one-time customers.
+
+Although I don't know what exactly this company specializes in, given that one-time customers are their source of revenue, then I can guess it's not a company that relies on the economy of information, but the economy of widgets, and they are directly selling products. If this isn't the case, and they're actually a company that relies on subsriptions and advertising revenue like a lot of tech startups nowadays, then they desperately need to change themselves to increase customer retention before this growth stagnates and they're stuck with fewer and fewer new customers.
